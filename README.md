@@ -14,6 +14,9 @@
 ## 第 1 步：复制模板
 
 复制 `template.cpp` → 重命名为你的题目的名字（比如 `sum.cpp`）
+```
+cp template.cpp sum.cpp
+```
 
 ## 第 2 步：改题目 ID
 
