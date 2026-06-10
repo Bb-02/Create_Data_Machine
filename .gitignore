@@ -1,7 +1,9 @@
 # 编译产物
 *.exe
+*.obj
 *.o
-*.out
+*.pdb
+*.ilk
 gen
 gen_*
 
