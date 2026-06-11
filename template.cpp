@@ -113,9 +113,31 @@ int main(int argc, char *argv[]) {
         else seed = stoull(arg), seed_set = true;
     }
 
-    rnd = new Random(seed_set ? seed : 0);
-    cerr << "Problem: " << g_problem_id << '\n';
-    if (seed_set) cerr << "Seed: " << seed << '\n';
+    // ---- 种子初始化说明 ----
+    // Random 底层是 mt19937_64 伪随机引擎：
+    //   - 同一种子 → 完全相同的随机序列（可复现数据，方便出题调参）
+    //   - 不同种子 → 完全不同的随机序列
+    //
+    // 种子生成策略：
+    //   1. 用户指定种子（如 ./gen 12345）→ 混入题目 ID 后作为种子
+    //      hash("题目ID") ^ 用户种子 → 保证不同题目即使同种子，序列也不同
+    //   2. 未指定种子 → 用系统时钟 + 题目 ID 自动生成（每次运行都不同）
+    //
+    // 为什么要混入 g_problem_id：
+    //   如果两个题目都写 rnd->next(1, 100) 作为第一个随机调用，且用同一种子，
+    //   它们会得到相同的"随机"值。混入题目 ID 后彻底隔离，互不干扰。
+    if (seed_set) {
+        // 用户种子 XOR 题目 ID 哈希 → 不同题目的序列彻底隔离
+        uint64_t id_hash = hash<string>{}(g_problem_id);
+        rnd = new Random(seed ^ id_hash);
+        cerr << "Problem: " << g_problem_id << '\n';
+        cerr << "Seed: " << seed << " (mixed with id hash: " << id_hash << ")\n";
+    } else {
+        // 无种子 → 默认构造函数用 steady_clock 时间戳做种子
+        rnd = new Random();
+        cerr << "Problem: " << g_problem_id << '\n';
+        cerr << "Seed: <random from system clock>\n";
+    }
 
     if (out_mode) gen_output(solve);
     else generate_input();
