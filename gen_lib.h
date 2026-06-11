@@ -72,6 +72,32 @@ struct Random {
         return next(0LL, n - 1);
     }
 
+    // [l, r] 范围内随机偶数
+    long long next_even(long long l, long long r) {
+        if (l % 2 != 0) l++;
+        if (r % 2 != 0) r--;
+        assert(l <= r);
+        return l + next(0LL, (r - l) / 2) * 2;
+    }
+
+    // [l, r] 范围内随机奇数
+    long long next_odd(long long l, long long r) {
+        if (l % 2 == 0) l++;
+        if (r % 2 == 0) r--;
+        assert(l <= r);
+        return l + next(0LL, (r - l) / 2) * 2;
+    }
+
+    // [l, r] 范围内随机 k 的整数倍（支持负数和 long long）
+    long long next_multiple(long long l, long long r, long long k) {
+        assert(k > 0);
+        auto rem = [&](long long x) { return ((x % k) + k) % k; };
+        long long lo = l + (k - rem(l)) % k;
+        long long hi = r - rem(r);
+        assert(lo <= hi);
+        return lo + next(0LL, (hi - lo) / k) * k;
+    }
+
     // ========== 浮点数随机 ==========
 
     // [0.0, 1.0) 随机浮点数
@@ -193,6 +219,12 @@ vector<long long> gen_strictly_increasing(int n, long long l, long long r) {
     auto vals = rnd->distinct(n, l, r);
     sort(vals.begin(), vals.end());
     return vals;
+}
+
+// 生成不重复的随机数组（保持随机顺序，未排序）
+vector<long long> gen_array_unique(int n, long long l, long long r) {
+    assert(n <= r - l + 1);
+    return rnd->distinct(n, l, r);
 }
 
 // ============================================================
@@ -333,6 +365,28 @@ vector<pair<int, int>> gen_tree_binary(int n) {
     return gen_tree_deg_capped(n, 3); // 根最多 2 子 + 可能无父，deg <= 3
 }
 
+// n 个节点以 1 为根的有根树，返回父节点数组 p[2..n]（p[1]=0 略去）
+vector<int> gen_parent_array(int n) {
+    if (n <= 1) return {};
+    auto edges = gen_tree_prufer(n);
+    vector<vector<int>> adj(n + 1);
+    for (auto [u, v] : edges) {
+        adj[u].push_back(v);
+        adj[v].push_back(u);
+    }
+    vector<int> parent(n + 1);
+    queue<int> q;
+    vector<bool> vis(n + 1);
+    q.push(1);
+    vis[1] = true;
+    while (!q.empty()) {
+        int u = q.front(); q.pop();
+        for (int v : adj[u])
+            if (!vis[v]) vis[v] = true, parent[v] = u, q.push(v);
+    }
+    return vector<int>(parent.begin() + 2, parent.end());
+}
+
 // ============================================================
 // 图生成器
 // ============================================================
@@ -395,6 +449,30 @@ vector<pair<int, int>> gen_dag(int n, int m) {
         int i = rnd->next_n(n), j = rnd->next_n(n);
         if (i >= j) continue;
         edge_set.insert({perm[i], perm[j]});
+    }
+    return vector<pair<int, int>>(edge_set.begin(), edge_set.end());
+}
+
+// n 个节点 m 条边的随机有向图（允许环，无重边无自环）
+vector<pair<int, int>> gen_graph_directed(int n, int m) {
+    long long max_m = (long long)n * (n - 1);
+    assert(m <= max_m);
+
+    if (m > max_m * 0.7 && n <= 5000) {
+        vector<pair<int, int>> pool;
+        for (int i = 1; i <= n; i++)
+            for (int j = 1; j <= n; j++)
+                if (i != j) pool.push_back({i, j});
+        rnd->shuffle(pool);
+        pool.resize(m);
+        return pool;
+    }
+
+    set<pair<int, int>> edge_set;
+    while ((int)edge_set.size() < m) {
+        int u = rnd->next(1, n), v = rnd->next(1, n);
+        if (u == v) continue;
+        edge_set.insert({u, v});
     }
     return vector<pair<int, int>>(edge_set.begin(), edge_set.end());
 }
